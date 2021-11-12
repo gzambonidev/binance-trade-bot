@@ -1,3 +1,6 @@
+
+import traceback
+
 from typing import List
 from re import search
 from binance.client import Client
@@ -105,7 +108,7 @@ def warmup_database(coin_list: List[str] = None, db_path = "data/crypto_trading.
         _ = manager.get_account()
     except Exception as e:  # pylint: disable=broad-except
         logger.error("Couldn't access Binance API - API keys may be wrong or lack sufficient permissions")
-        logger.error(e)
+        logger.error(traceback.format_exc())
         return
 
     logger.info("Creating database schema if it doesn't already exist")

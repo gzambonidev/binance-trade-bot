@@ -80,7 +80,7 @@ class BinanceOrderBalanceManager(AbstractOrderBalanceManager):
         return self.create_order(**params)
 
     def create_order(self, **params):
-        return self.binance_client.create_order(**params)
+        return self.binance_client.create_order(**params, recvWindow=8000)
 
     def get_currency_balance(self, currency_symbol: str, force=False):
         """
@@ -93,7 +93,7 @@ class BinanceOrderBalanceManager(AbstractOrderBalanceManager):
                 cache_balances.update(
                     {
                         currency_balance["asset"]: float(currency_balance["free"])
-                        for currency_balance in self.binance_client.get_account()["balances"]
+                        for currency_balance in self.binance_client.get_account(recvWindow=8000)["balances"]
                     }
                 )
                 self.logger.debug(f"Fetched all balances: {cache_balances}")
@@ -174,11 +174,11 @@ class BinanceAPIManager:
 
     @cached(cache=TTLCache(maxsize=1, ttl=43200))
     def get_trade_fees(self) -> Dict[str, float]:
-        return {ticker["symbol"]: float(ticker["takerCommission"]) for ticker in self.binance_client.get_trade_fee()}
+        return {ticker["symbol"]: float(ticker["takerCommission"]) for ticker in self.binance_client.get_trade_fee(recvWindow=8000)}
 
     @cached(cache=TTLCache(maxsize=1, ttl=60))
     def get_using_bnb_for_fees(self):
-        return self.binance_client.get_bnb_burn_spot_margin()["spotBNBBurn"]
+        return self.binance_client.get_bnb_burn_spot_margin(recvWindow=8000)["spotBNBBurn"]
 
     def get_fee(self, origin_coin: Coin, target_coin: Coin, selling: bool):
         if self.config.TRADE_FEE != "auto":
@@ -214,7 +214,7 @@ class BinanceAPIManager:
         """
         Get account information
         """
-        return self.binance_client.get_account()
+        return self.binance_client.get_account(recvWindow=8000)
 
     def get_buy_price(self, ticker_symbol: str):
         price_type = self.config.PRICE_TYPE
@@ -254,7 +254,7 @@ class BinanceAPIManager:
         price = self.cache.ticker_values_ask.get(ticker_symbol, None)
         if price is None and ticker_symbol not in self.cache.non_existent_tickers:
             try:
-                ticker = self.binance_client.get_orderbook_ticker(symbol = ticker_symbol)
+                ticker = self.binance_client.get_orderbook_ticker(symbol=ticker_symbol, recvWindow=8000)
                 price = float(ticker['askPrice'])
             except BinanceAPIException as e:
                 if e.code == -1121: # invalid symbol
@@ -274,7 +274,7 @@ class BinanceAPIManager:
         price = self.cache.ticker_values_bid.get(ticker_symbol, None)
         if price is None and ticker_symbol not in self.cache.non_existent_tickers:
             try:
-                ticker = self.binance_client.get_orderbook_ticker(symbol = ticker_symbol)
+                ticker = self.binance_client.get_orderbook_ticker(symbol=ticker_symbol)
                 price = float(ticker['bidPrice'])
             except BinanceAPIException as e:
                 if e.code == -1121: # invalid symbol
@@ -348,7 +348,7 @@ class BinanceAPIManager:
                     cancel_order = None
                     while cancel_order is None:
                         cancel_order = self.binance_client.cancel_order(
-                            symbol=origin_symbol + target_symbol, orderId=order_id
+                            symbol=origin_symbol + target_symbol, orderId=order_id, recvWindow=8000
                         )
                     self.logger.info("Order timeout, canceled...")
 
@@ -360,7 +360,7 @@ class BinanceAPIManager:
                         partially_order = None
                         while partially_order is None:
                             partially_order = self.binance_client.order_market_sell(
-                                symbol=origin_symbol + target_symbol, quantity=order_quantity
+                                symbol=origin_symbol + target_symbol, quantity=order_quantity, recvWindow=8000
                             )
 
                     self.logger.info("Going back to scouting mode...")

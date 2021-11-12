@@ -1,5 +1,6 @@
 #!python3
 import time
+import traceback
 
 from .binance_api_manager import BinanceAPIManager
 from .config import Config
@@ -26,6 +27,7 @@ def main():
     except Exception as e:  # pylint: disable=broad-except
         logger.error("Couldn't access Binance API - API keys may be wrong or lack sufficient permissions")
         logger.error(e)
+        logger.error(traceback.format_exc())
         return
     strategy = get_strategy(config.STRATEGY)
     if strategy is None:
