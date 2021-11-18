@@ -1,4 +1,3 @@
-import json
 from collections import defaultdict
 from datetime import datetime
 from typing import Dict, List
@@ -75,9 +74,9 @@ class AutoTrader:
                         "Skipping update for coin {} not found".format(pair.from_coin + self.config.BRIDGE)
                     )
                     continue
-                
+
                 # check if we hold above min_notional coins of from_coin. If so skip ratio update.
-                from_coin_balance = self.manager.get_currency_balance(pair.from_coin.symbol)          
+                from_coin_balance = self.manager.get_currency_balance(pair.from_coin.symbol)
                 min_notional = self.manager.get_min_notional(pair.from_coin.symbol, self.config.BRIDGE.symbol)
                 if from_coin_price * from_coin_balance > min_notional:
                     continue
@@ -130,7 +129,7 @@ class AutoTrader:
         scout_logs = []
         excluded_coin_symbols = [c.symbol for c in excluded_coins]
         for pair in self.db.get_pairs_from(coin):
-            #skip excluded coins
+            # skip excluded coins
             if pair.to_coin.symbol in excluded_coin_symbols:
                 continue
 
@@ -149,7 +148,7 @@ class AutoTrader:
             coin_opt_coin_ratio = coin_price / optional_coin_price
 
             from_fee = self.manager.get_fee(pair.from_coin, self.config.BRIDGE, True)
-            to_fee =  self.manager.get_fee(pair.to_coin, self.config.BRIDGE, False)
+            to_fee = self.manager.get_fee(pair.to_coin, self.config.BRIDGE, False)
 
             if self.config.RATIO_CALC == self.config.RATIO_CALC_DEFAULT:
                 transaction_fee = from_fee + to_fee
@@ -169,11 +168,11 @@ class AutoTrader:
         Given a coin, search for a coin to jump to
         """
         ratio_dict, prices = self._get_ratios(coin, coin_price, excluded_coins)
-        
+
         # keep only ratios bigger than zero
         ratio_dict = {k: v for k, v in ratio_dict.items() if v > 0}
-        
-        # if we have any viable options, pick 
+
+        # if we have any viable options, pick
         # the one with the biggest ratio
         if ratio_dict:
             best_pair = max(ratio_dict, key=ratio_dict.get)
@@ -181,7 +180,7 @@ class AutoTrader:
             self.transaction_through_bridge(best_pair, coin_price, prices[best_pair.to_coin_id])
         else:
             self.logger.debug("No ratios bigger than zero, continue scouting")
-        
+
     def bridge_scout(self):
         """
         If we have any bridge coin leftover, buy a coin with it that we won't immediately trade out of
