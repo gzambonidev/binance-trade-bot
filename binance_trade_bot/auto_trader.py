@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 from datetime import datetime
 from typing import Dict, List
@@ -168,16 +169,19 @@ class AutoTrader:
         Given a coin, search for a coin to jump to
         """
         ratio_dict, prices = self._get_ratios(coin, coin_price, excluded_coins)
-
+        
         # keep only ratios bigger than zero
         ratio_dict = {k: v for k, v in ratio_dict.items() if v > 0}
-
-        # if we have any viable options, pick the one with the biggest ratio
+        
+        # if we have any viable options, pick 
+        # the one with the biggest ratio
         if ratio_dict:
             best_pair = max(ratio_dict, key=ratio_dict.get)
             self.logger.info(f"Will be jumping from {coin} to {best_pair.to_coin_id}")
             self.transaction_through_bridge(best_pair, coin_price, prices[best_pair.to_coin_id])
-
+        else:
+            self.logger.debug("No ratios bigger than zero, continue scouting")
+        
     def bridge_scout(self):
         """
         If we have any bridge coin leftover, buy a coin with it that we won't immediately trade out of
@@ -191,19 +195,21 @@ class AutoTrader:
                 continue
 
             ratio_dict, _ = self._get_ratios(coin, current_coin_price)
-            if not any(v > 0 for v in ratio_dict.values()):
-                # There will only be one coin where all the ratios are negative. When we find it, buy it if we can
-                if bridge_balance > self.manager.get_min_notional(coin.symbol, self.config.BRIDGE.symbol):
-                    self.logger.info(f"Will be purchasing {coin} using bridge coin")
-                    result = self.manager.buy_alt(
-                        coin, self.config.BRIDGE, self.manager.get_sell_price(coin + self.config.BRIDGE)
-                    )
-                    if result is not None:
-                        self.db.set_current_coin(coin)
-                        self.failed_buy_order = False
-                        return coin
-                    else:
-                        self.failed_buy_order = True
+            if all(
+                v <= 0 for v in ratio_dict.values()
+            ) and bridge_balance > self.manager.get_min_notional(
+                coin.symbol, self.config.BRIDGE.symbol
+            ):
+                self.logger.info(f"Will be purchasing {coin} using bridge coin")
+                result = self.manager.buy_alt(
+                    coin, self.config.BRIDGE, self.manager.get_sell_price(coin + self.config.BRIDGE)
+                )
+                if result is not None:
+                    self.db.set_current_coin(coin)
+                    self.failed_buy_order = False
+                    return coin
+                else:
+                    self.failed_buy_order = True
         return None
 
     def update_values(self):

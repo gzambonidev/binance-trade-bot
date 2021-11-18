@@ -70,6 +70,7 @@ class BinanceOrderBalanceManager(AbstractOrderBalanceManager):
             "side": side,
             "quantity": float_as_decimal_str(quantity),
             "type": self.config.BUY_ORDER_TYPE if side == Client.SIDE_BUY else self.config.SELL_ORDER_TYPE,
+            'recvWindow': 8000
         }
         if params["type"] == Client.ORDER_TYPE_LIMIT:
             params["timeInForce"] = self.binance_client.TIME_IN_FORCE_GTC
@@ -80,7 +81,7 @@ class BinanceOrderBalanceManager(AbstractOrderBalanceManager):
         return self.create_order(**params)
 
     def create_order(self, **params):
-        return self.binance_client.create_order(**params, recvWindow=8000)
+        return self.binance_client.create_order(**params)
 
     def get_currency_balance(self, currency_symbol: str, force=False):
         """
@@ -254,7 +255,7 @@ class BinanceAPIManager:
         price = self.cache.ticker_values_ask.get(ticker_symbol, None)
         if price is None and ticker_symbol not in self.cache.non_existent_tickers:
             try:
-                ticker = self.binance_client.get_orderbook_ticker(symbol=ticker_symbol, recvWindow=8000)
+                ticker = self.binance_client.get_orderbook_ticker(symbol=ticker_symbol)
                 price = float(ticker['askPrice'])
             except BinanceAPIException as e:
                 if e.code == -1121: # invalid symbol
@@ -348,7 +349,7 @@ class BinanceAPIManager:
                     cancel_order = None
                     while cancel_order is None:
                         cancel_order = self.binance_client.cancel_order(
-                            symbol=origin_symbol + target_symbol, orderId=order_id, recvWindow=8000
+                            symbol=origin_symbol + target_symbol, orderId=order_id
                         )
                     self.logger.info("Order timeout, canceled...")
 
@@ -360,7 +361,7 @@ class BinanceAPIManager:
                         partially_order = None
                         while partially_order is None:
                             partially_order = self.binance_client.order_market_sell(
-                                symbol=origin_symbol + target_symbol, quantity=order_quantity, recvWindow=8000
+                                symbol=origin_symbol + target_symbol, quantity=order_quantity
                             )
 
                     self.logger.info("Going back to scouting mode...")
